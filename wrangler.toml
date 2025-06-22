@@ -6,3 +6,5 @@ compatibility_date = "2023-12-18"
 [[email]]
 type = "send"
 name = "mailvoid-forwarder"
+[observability.logs]
+enabled = true
