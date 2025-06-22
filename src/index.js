@@ -62,6 +62,12 @@ export default {
         spam_Score: message.headers.get('x-spam-score') || null
       };
 
+      if (!env.MAILVOID_API_URL) {
+        console.error('❌ MAILVOID_API_URL not configured');
+        message.setReject('API URL not configured');
+        return;
+      }
+
       console.log('📤 Forwarding to Mailvoid API', {
         subject: emailData.subject,
         textLength: emailData.text?.length || 0,
@@ -73,6 +79,7 @@ export default {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Api-Key': env.MAILVOID_API_KEY,
           'User-Agent': 'Cloudflare-Worker-Email-Forwarder/1.0'
         },
         body: JSON.stringify(emailData)
