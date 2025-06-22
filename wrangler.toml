@@ -1,0 +1,14 @@
+name = "mailvoid-email-forwarder"
+main = "src/index.js"
+compatibility_date = "2023-12-18"
+
+[env.production]
+vars = { ENVIRONMENT = "production" }
+
+[env.staging]  
+vars = { ENVIRONMENT = "staging" }
+
+# Email routing configuration
+[[email]]
+type = "send"
+name = "mailvoid-forwarder"
