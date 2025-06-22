@@ -9,7 +9,6 @@ export default {
 
     try {
       console.log('📧 Extracting email content...');
-      const rawMessage = await message.raw();
       const textContent = await message.text();
       const htmlContent = await message.html();
       
