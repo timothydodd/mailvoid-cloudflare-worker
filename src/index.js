@@ -1,6 +1,14 @@
 export default {
   async email(message, env, ctx) {
+    const startTime = Date.now();
+    console.log('🔄 Email processing started', {
+      from: message.from,
+      to: message.to,
+      timestamp: new Date().toISOString()
+    });
+
     try {
+      console.log('📧 Extracting email content...');
       const rawMessage = await message.raw();
       const textContent = await message.text();
       const htmlContent = await message.html();
@@ -27,29 +35,55 @@ export default {
         spam_Score: message.headers.get('x-spam-score') || null
       };
 
+      console.log('📤 Forwarding to Mailvoid API', {
+        subject: emailData.subject,
+        textLength: emailData.text?.length || 0,
+        htmlLength: emailData.html?.length || 0,
+        apiUrl: env.MAILVOID_API_URL
+      });
+
       const response = await fetch(env.MAILVOID_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${env.MAILVOID_API_KEY}`,
           'User-Agent': 'Cloudflare-Worker-Email-Forwarder/1.0'
         },
         body: JSON.stringify(emailData)
       });
 
       if (!response.ok) {
-        console.error(`Failed to forward email: ${response.status} ${response.statusText}`);
+        console.error('❌ Failed to forward email', {
+          status: response.status,
+          statusText: response.statusText,
+          from: message.from,
+          to: message.to,
+          subject: emailData.subject
+        });
         const errorText = await response.text();
-        console.error('Error details:', errorText);
+        console.error('Error response body:', errorText);
         
         message.setReject(`Failed to forward email: ${response.status}`);
         return;
       }
 
-      console.log('Email successfully forwarded to Mailvoid API');
+      const processingTime = Date.now() - startTime;
+      console.log('✅ Email successfully forwarded to Mailvoid API', {
+        from: message.from,
+        to: message.to,
+        subject: emailData.subject,
+        processingTimeMs: processingTime,
+        responseStatus: response.status
+      });
       
     } catch (error) {
-      console.error('Error processing email:', error);
+      const processingTime = Date.now() - startTime;
+      console.error('💥 Error processing email', {
+        error: error.message,
+        stack: error.stack,
+        from: message.from,
+        to: message.to,
+        processingTimeMs: processingTime
+      });
       message.setReject('Internal server error while processing email');
     }
   },
