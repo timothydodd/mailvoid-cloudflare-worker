@@ -12,8 +12,6 @@ export default {
       
       // Read raw email content
       let emailContent = '';
-      let textContent = '';
-      let htmlContent = '';
       
       if (message.raw) {
         const reader = message.raw.getReader();
@@ -28,38 +26,17 @@ export default {
           }
           emailContent = chunks.join('');
           
-          // Basic parsing for text and HTML content
-          const textMatch = emailContent.match(/Content-Type: text\/plain[\s\S]*?\n\n([\s\S]*?)(?=\n--|\n\nContent-Type|\n$)/i);
-          const htmlMatch = emailContent.match(/Content-Type: text\/html[\s\S]*?\n\n([\s\S]*?)(?=\n--|\n\nContent-Type|\n$)/i);
-          
-          textContent = textMatch ? textMatch[1].trim() : '';
-          htmlContent = htmlMatch ? htmlMatch[1].trim() : '';
-          
         } finally {
           reader.releaseLock();
         }
       }
-      
-      const envelope = {
-        to: Array.isArray(message.to) ? message.to : [message.to],
-        from: message.from
-      };
 
       const emailData = {
-        headers: JSON.stringify(Object.fromEntries(message.headers)),
-        dkim: message.headers.get('dkim-signature') || null,
-        to: message.to,
-        html: htmlContent || null,
         from: message.from,
-        text: textContent || null,
-        sender_Ip: message.headers.get('x-originating-ip') || message.headers.get('x-sender-ip') || null,
-        spf: message.headers.get('received-spf') || null,
-        attachments: null, // Cloudflare Workers email doesn't provide easy attachment access
-        subject: message.headers.get('subject') || null,
-        envelope: JSON.stringify(envelope),
-        charsets: message.headers.get('content-type')?.match(/charset=([^;]+)/)?.[1] || null,
-        createdOn: new Date().toISOString(),
-        spam_Score: message.headers.get('x-spam-score') || null
+        to: message.to,
+        headers: Object.fromEntries(message.headers),
+        raw: emailContent,
+        rawSize: message.rawSize || emailContent.length
       };
 
       if (!env.MAILVOID_API_URL) {
@@ -69,9 +46,9 @@ export default {
       }
 
       console.log('📤 Forwarding to Mailvoid API', {
-        subject: emailData.subject,
-        textLength: emailData.text?.length || 0,
-        htmlLength: emailData.html?.length || 0,
+        from: emailData.from,
+        to: emailData.to,
+        rawSize: emailData.rawSize,
         apiUrl: env.MAILVOID_API_URL
       });
 
@@ -89,9 +66,8 @@ export default {
         console.error('❌ Failed to forward email', {
           status: response.status,
           statusText: response.statusText,
-          from: message.from,
-          to: message.to,
-          subject: emailData.subject
+          from: emailData.from,
+          to: emailData.to
         });
         const errorText = await response.text();
         console.error('Error response body:', errorText);
@@ -102,9 +78,9 @@ export default {
 
       const processingTime = Date.now() - startTime;
       console.log('✅ Email successfully forwarded to Mailvoid API', {
-        from: message.from,
-        to: message.to,
-        subject: emailData.subject,
+        from: emailData.from,
+        to: emailData.to,
+        rawSize: emailData.rawSize,
         processingTimeMs: processingTime,
         responseStatus: response.status
       });
