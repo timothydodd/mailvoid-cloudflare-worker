@@ -2,9 +2,5 @@ name = "mailvoid-email-forwarder"
 main = "src/index.js"
 compatibility_date = "2023-12-18"
 
-# Email routing configuration
-[[email]]
-type = "send"
-name = "mailvoid-forwarder"
 [observability.logs]
 enabled = true
