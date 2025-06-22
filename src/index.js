@@ -9,8 +9,36 @@ export default {
 
     try {
       console.log('📧 Extracting email content...');
-      const textContent = await message.text();
-      const htmlContent = await message.html();
+      
+      // Read raw email content
+      let emailContent = '';
+      let textContent = '';
+      let htmlContent = '';
+      
+      if (message.raw) {
+        const reader = message.raw.getReader();
+        const decoder = new TextDecoder();
+        let chunks = [];
+        
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(decoder.decode(value, { stream: true }));
+          }
+          emailContent = chunks.join('');
+          
+          // Basic parsing for text and HTML content
+          const textMatch = emailContent.match(/Content-Type: text\/plain[\s\S]*?\n\n([\s\S]*?)(?=\n--|\n\nContent-Type|\n$)/i);
+          const htmlMatch = emailContent.match(/Content-Type: text\/html[\s\S]*?\n\n([\s\S]*?)(?=\n--|\n\nContent-Type|\n$)/i);
+          
+          textContent = textMatch ? textMatch[1].trim() : '';
+          htmlContent = htmlMatch ? htmlMatch[1].trim() : '';
+          
+        } finally {
+          reader.releaseLock();
+        }
+      }
       
       const envelope = {
         to: Array.isArray(message.to) ? message.to : [message.to],

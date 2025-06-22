@@ -67,3 +67,45 @@ The worker expects these environment variables:
 ## Email Routing
 
 Configure email routing in your Cloudflare Dashboard under Email Routing to forward emails to this worker.
+
+## Cloudflare Workers Email API
+
+The Cloudflare Workers email message object provides these properties and methods:
+
+### Message Properties
+- `message.from` - Sender's email address (string)
+- `message.to` - Recipient's email address (string)  
+- `message.headers` - Headers object with all email headers
+- `message.raw` - ReadableStream of the full raw email content
+- `message.rawSize` - Size of the email message content (number)
+
+### Message Methods
+- `message.setReject(reason)` - Reject the email with a specific reason
+- `message.forward(rcptTo, headers)` - Forward the email to another address
+- `message.reply(EmailMessage)` - Reply to the sender with a new email
+
+### Content Extraction
+Since there are no direct `.text()` or `.html()` methods, the worker reads from `message.raw` stream and parses the content using regex patterns to extract:
+- Plain text content from `Content-Type: text/plain` sections
+- HTML content from `Content-Type: text/html` sections
+
+### Data Mapping to EmailModel
+The worker maps Cloudflare email data to your EmailModel structure:
+```json
+{
+  "headers": "JSON string of all headers",
+  "dkim": "DKIM-Signature header value",
+  "to": "recipient@domain.com",
+  "html": "HTML content or null",
+  "from": "sender@domain.com", 
+  "text": "Plain text content or null",
+  "sender_Ip": "X-Originating-IP or X-Sender-IP header",
+  "spf": "Received-SPF header value",
+  "attachments": null,
+  "subject": "Email subject",
+  "envelope": "JSON string with to/from arrays",
+  "charsets": "Charset from Content-Type header",
+  "createdOn": "ISO timestamp",
+  "spam_Score": "X-Spam-Score header value"
+}
+```
