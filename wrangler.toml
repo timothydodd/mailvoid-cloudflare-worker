@@ -1,4 +1,4 @@
-name = "mailvoid-email-forwarder"
+name = "mail-worker"
 main = "src/index.js"
 compatibility_date = "2023-12-18"
 
